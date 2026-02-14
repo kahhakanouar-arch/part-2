@@ -83,13 +83,20 @@ end
 
 local function IsVisible(part)
     if not part then return false end
+    
     local origin = Camera.CFrame.Position
     local direction = (part.Position - origin)
+    
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Blacklist
-    params.FilterDescendantsInstances = {LocalPlayer.Character, part.Parent}
-    local result = workspace:Raycast(origin, direction * 999, params)
-    return not result
+    params.FilterDescendantsInstances = {LocalPlayer.Character}   -- Correction clé : seulement toi
+    params.IgnoreWater = true
+    
+    local result = workspace:Raycast(origin, direction * 2000, params)
+    
+    if not result then return true end
+    
+    return result.Instance and result.Instance:IsDescendantOf(part.Parent)
 end
 
 -- === COULEURS Outils (CUSTOM) ===
@@ -316,7 +323,6 @@ local function applyPlayerESP(char)
     hl.OutlineTransparency = 0
     hl.FillTransparency = 1
     hl.Enabled = espEnabled
-    -- Toggle highlight enabled in update if needed, but for simplicity toggle via destroy/recreate
 end
 
 local function onCharAdded(char)
@@ -325,12 +331,10 @@ local function onCharAdded(char)
     task.delay(0.6, function()
         removePlayerESP(char)
         if espEnabled then applyPlayerESP(char) end
-        -- Recreate inventory too
         if not ProtectedPlayers[plr] then createInventoryESP(plr) end
     end)
 end
 
--- Connexions pour nouveaux joueurs/respawn
 for _, p in ipairs(Players:GetPlayers()) do
     if p ~= LocalPlayer then
         p.CharacterAdded:Connect(onCharAdded)
@@ -344,7 +348,6 @@ Players.PlayerAdded:Connect(function(p)
     end
 end)
 
--- Maintien ESP Player
 RunService.Heartbeat:Connect(function()
     if espEnabled then
         for _, p in ipairs(Players:GetPlayers()) do
@@ -358,7 +361,7 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- === GUI ===
+-- === GUI === (inchangée)
 local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
 ScreenGui.Name = "anouar777x_KING"
 ScreenGui.IgnoreGuiInset = true
@@ -534,17 +537,15 @@ ESPToggle.MouseButton1Click:Connect(function()
     ESPToggle.Text = "ESP: " .. (espEnabled and "ON" or "OFF")
     ESPToggle.BackgroundColor3 = espEnabled and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,0,0)
     
-    -- Clean + Recreate si ON
     if espEnabled then
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and not ProtectedPlayers[p] and p.Character then
-                task.wait(0.1)  -- Anti-lag
+                task.wait(0.1)
                 createInventoryESP(p)
                 applyPlayerESP(p.Character)
             end
         end
     else
-        -- Clean tout
         for name, esp in pairs(activeESP) do
             if esp.bb then esp.bb:Destroy() end
             if esp.line then esp.line:Remove() end
@@ -556,7 +557,6 @@ ESPToggle.MouseButton1Click:Connect(function()
     end
 end)
 
--- Autres boutons
 AimbotToggle.MouseButton1Click:Connect(function()
     AimbotOn = not AimbotOn
     AimbotToggle.Text = "Aimbot: " .. (AimbotOn and "ON" or "OFF")
@@ -597,7 +597,6 @@ ToggleButton.MouseButton1Click:Connect(function()
     if guiOpen then UpdateProtectedList() end
 end)
 
--- Liste Protected
 function UpdateProtectedList()
     for _, b in pairs(PlayerButtons) do b:Destroy() end
     PlayerButtons = {}
@@ -616,7 +615,6 @@ function UpdateProtectedList()
             btn.MouseButton1Click:Connect(function()
                 ProtectedPlayers[p] = not ProtectedPlayers[p]
                 UpdateProtectedList()
-                -- Clean ESP si newly protected
                 if ProtectedPlayers[p] and p.Character then
                     removePlayerESP(p.Character)
                     if activeESP[p.Name] then
@@ -661,4 +659,4 @@ end
 makeDraggable(MainFrame, MainDrag)
 makeDraggable(ToggleButton, ToggleDrag)
 
-print("🔥 Anouar777x Hub FULL FUSION LOADED - ESP Gold/Red + Aimbot + Protect ID ! 👑")
+print("🔥 Anouar777x Hub FULL FUSION LOADED - Wallcheck fixé - GUI intacte 👑")
